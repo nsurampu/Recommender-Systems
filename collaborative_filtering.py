@@ -9,11 +9,12 @@ rating_dict  = pickle.load(rating_pickle)
 
 movieIds = movie_dict.keys()
 userIds = rating_dict.keys()
+last_movieId = int(list(movieIds)[-1])
 
 user_rating_matrix = [0] * (len(userIds) + 1)
 
 for i in range(0, len(user_rating_matrix)):
-    user_rating_matrix[i] = [0] * (193610)
+    user_rating_matrix[i] = [0] * (last_movieId + 1)
 
 for user in userIds:
     user_movies = rating_dict[user].keys()
@@ -58,3 +59,6 @@ sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pear
 top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:6]}
 
 print(top_matches)
+
+test_user_ratings = user_rating_matrix[test_user]
+movie_pred_dict = {}
