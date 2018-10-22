@@ -75,12 +75,13 @@ if method == 1:
             temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
             temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = temp_numerator / temp_denominator
+    pred_rating = round((temp_numerator / temp_denominator), 2)
     test_rating = user_rating_matrix[test_user][test_movie]
-    k_error = abs(pred_rating - test_rating) * (100 / (test_rating))
     print("Predicted rating: " + str(pred_rating))
-    print("Actual rating: " + str(test_rating))
-    print("Closeness for k-neigbours: " + str(100 - round(k_error, 2)) + "%")
+    if test_rating > 0:
+        k_error = abs(pred_rating - test_rating) * (100 / (test_rating))
+        print("Actual rating: " + str(test_rating))
+        print("Closeness for k-neigbours: " + str(100 - round(k_error, 2)) + "%")
 
 # Spearman Method
 elif method == 2:
@@ -128,9 +129,10 @@ elif method == 2:
                 temp_numerator = temp_numerator + (float(spearman_dict[user]) * user_rating_matrix[int(user)][test_movie])
                 temp_denominator = temp_denominator + float(spearman_dict[user])
 
-    pred_rating = temp_numerator / temp_denominator
+    pred_rating = round((temp_numerator / temp_denominator), 2)
     test_rating = user_rating_matrix[test_user][test_movie]
-    spearman_error = abs(pred_rating - test_rating) * (100 / (test_rating))
     print("Predicted rating: " + str(pred_rating))
-    print("Actual rating: " + str(test_rating))
-    print("Closeness for Spearman ranking: " + str(100 - round(spearman_error, 2)) + "%")
+    if test_rating > 0:
+        spearman_error = abs(pred_rating - test_rating) * (100 / (test_rating))
+        print("Actual rating: " + str(test_rating))
+        print("Closeness for Spearman ranking: " + str(100 - round(spearman_error, 2)) + "%")
