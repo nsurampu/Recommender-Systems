@@ -33,31 +33,6 @@ pearson_dict = {}
 last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
 
 # Baseline estimation
-total_rating = 0
-total_test_user_rating = 0
-total_test_movie_rating = 0
-length_1 = 0
-length_2 = 0
-for movie in movieIds:
-    total_test_user_rating = total_test_user_rating + user_rating_matrix[test_user][int(movie)]
-    for user in userIds:
-        total_rating = total_rating + user_rating_matrix[int(user)][int(movie)]
-        length_2 = length_2 + 1
-    length_1 = length_1 + 1
-
-mean_rating = total_rating / length_2
-mean_test_user_rating = total_test_user_rating / length_1
-length_1 = 0
-
-for user in userIds:
-    total_test_movie_rating = total_test_movie_rating + user_rating_matrix[int(user)][test_movie]
-    length_1 = length_1 + 1
-
-mean_test_movie_rating = total_test_movie_rating / length_1
-movie_rating_deviation = mean_test_movie_rating - mean_rating
-user_rating_deviation = mean_test_user_rating - mean_rating
-
-baseline_estimate = mean_rating + movie_rating_deviation + user_rating_deviation
 
 # K-neighbours method
 if method == 1:
