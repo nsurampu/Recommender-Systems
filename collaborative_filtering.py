@@ -1,6 +1,7 @@
 import pickle
 import math
 import scipy.stats as ss
+import numpy
 
 movie_pickle = open("movie_file.txt", 'rb')
 rating_pickle = open("rating_file.txt", 'rb')
@@ -22,20 +23,21 @@ for user in userIds:
     for movie in user_movies:
         user_rating_matrix[int(user)][int(movie)] = float(rating_dict[user][movie])
 
-test_user = int(input("Enter userId: "))
-test_movie = int(input("Enter movieId: "))
-method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking: "))
-test_user_movies_dict = rating_dict[str(test_user)]
-test_user_movies = test_user_movies_dict.keys()
-mean_test_rating = 0
-test_user_rating = 0
-pearson_dict = {}
-last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
+method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking 3. RMSE: "))
+if method != 3:
+    test_user = int(input("Enter userId: "))
+    test_movie = int(input("Enter movieId: "))
+    test_user_movies_dict = rating_dict[str(test_user)]
+    test_user_movies = test_user_movies_dict.keys()
+    mean_test_rating = 0
+    test_user_rating = 0
+    last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
 
 # Baseline estimation
 
 # K-neighbours method
 if method == 1:
+    pearson_dict = {}
     for user in userIds:
         user = int(user)
         user_rating = 0
@@ -102,8 +104,8 @@ elif method == 2:
     user_movies_ranks = {}
 
     for user in temp_user_rating_dict.keys():
-        test_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_test_rating_dict[user]])
-        user_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_user_rating_dict[user]])
+        test_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_test_rating_dict[user]])   # Check code later
+        user_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_user_rating_dict[user]])   # Check here also
 
     spearman_dict = {}
     users = test_movies_ranks.keys()
@@ -136,3 +138,41 @@ elif method == 2:
         spearman_error = abs(pred_rating - test_rating) * (100 / (test_rating))
         print("Actual rating: " + str(test_rating))
         print("Closeness for Spearman ranking: " + str(100 - round(spearman_error, 2)) + "%")
+
+# Root Mean Square Error
+elif method == 3:
+    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.8*len(userIds))))
+    temp_userIds = list(userIds)
+    test_users = []
+    for i in range(0, len(temp_userIds)):
+        if(int(temp_userIds[i]) not in train_users):
+            test_users.append(int(temp_userIds[i]))
+    errors = []
+    for test_user in test_users:
+        print("*****  Test user: " + str(test_user) + "  *****")
+        similarity = []
+        sim_train_user_vector = [[]]
+        test_user_vector = user_rating_matrix[int(test_user)]
+        temp_rx_array = numpy.array(test_user_vector)
+        rx_mag = round(numpy.linalg.norm(temp_rx_array), 2)
+        for train_user in train_users:
+            print("Train user: " + str(train_user))
+            train_user_vector = user_rating_matrix[int(train_user)]
+            temp_numerator = 0
+            for i in range(0, len(train_user_vector)):
+                temp_numerator = temp_numerator + (test_user_vector[i] * train_user_vector[i])
+            temp_ry_array = numpy.array(train_user_vector)
+            ry_mag = round(numpy.linalg.norm(temp_ry_array), 2)
+            temp_sim = temp_numerator/ (rx_mag * ry_mag)
+            sim = round(temp_sim, 2)
+            similarity.append(sim)
+            sim_train_user_vector.append([round((sim * r), 2) for r in train_user_vector])
+        temp_numerator = [sum([row[i] for row in sim_train_user_vector]) for i in range(0,len(sim_train_user_vector[0]))]
+        temp_denominator = sum(similarity)
+        pred_rating = [numerator / temp_denominator for numerator in temp_numerator]
+        for i in range(0, len(test_user_vector)):
+            errors.append(round((pred_rating[i] - test_user_vector[i]) ** 2), 2)
+        print("\n")
+
+    rms_error = round((sum(errors) / len(errors)), 2)
+    print("RMSE of recommender system: " + str(rms_error))
