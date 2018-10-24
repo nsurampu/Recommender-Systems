@@ -3,6 +3,7 @@ import math
 import scipy.stats as ss
 import numpy
 
+print("Unpickling data...")
 movie_pickle = open("movie_file.txt", 'rb')
 rating_pickle = open("rating_file.txt", 'rb')
 
@@ -18,12 +19,14 @@ user_rating_matrix = [0] * (len(userIds) + 1)
 for i in range(0, len(user_rating_matrix)):
     user_rating_matrix[i] = [0] * (last_movieId + 1)
 
+print("Creating user-rating matrix...")
 for user in userIds:
     user_movies = rating_dict[user].keys()
     for movie in user_movies:
         user_rating_matrix[int(user)][int(movie)] = float(rating_dict[user][movie])
 
 # Baseline estimation
+print("Calculating mean ratings of users...")
 mean_user_rating_dict = {}
 length = 0
 total_rating = 0
@@ -39,6 +42,8 @@ for user in userIds:
     mean_user_rating = round(total_user_rating / temp_length, 2)
     mean_user_rating_dict[user]  = str(mean_user_rating)
 
+print("Calculating mean ratings of movies...")
+mean_movie_rating_dict = {}
 for movie in movieIds:
     movie_rating = 0
     temp_length = 0
@@ -46,6 +51,8 @@ for movie in movieIds:
         if user_rating_matrix[int(user)][int(movie)] > 0:
             movie_rating = movie_rating + user_rating_matrix[int(user)][int(movie)]
             temp_length = temp_length + 1
+            mean_movie_rating = round(movie_rating / temp_length, 2)
+    mean_movie_rating_dict[movie] = str(mean_movie_rating)
 
 total_mean_rating = round(total_rating / length, 2)
 
@@ -62,6 +69,7 @@ if method != 3:
 
 # K-neighbours method
 if method == 1:
+    test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
     pearson_dict = {}
     for user in userIds:
         user = int(user)
@@ -91,24 +99,32 @@ if method == 1:
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
     top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
-
+    print(top_matches)
     top_users = list(top_matches.keys())
 
     temp_numerator = 0
     temp_denominator = 0
+    temp_numerator_baseline = 0
 
+    print("Predicting rating...")
     for user in top_users:
         if top_matches[user] != 1:
+            user_baseline = float(mean_user_rating_dict[str(user)]) - user_rating_matrix[user][test_movie]
+            temp_numerator_baseline = temp_numerator_baseline + (float(top_matches[user]) * (user_rating_matrix[user][test_movie] - user_baseline))
             temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
             temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = round((temp_numerator / temp_denominator), 2)
+    pred_rating = round(temp_numerator / temp_denominator, 2)
+    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
+    print("Predicted rating (baseline): " + str(pred_rating_baseline))
     if test_rating > 0:
         k_error = abs(pred_rating - test_rating) * (100 / (test_rating))
+        k_error_baseline = abs(pred_rating_baseline - test_rating) * (100 / test_rating)
         print("Actual rating: " + str(test_rating))
         print("Closeness for k-neigbours: " + str(100 - round(k_error, 2)) + "%")
+        print("Closeness for k-neighbours (baseline): " + str(100 - round(k_error_baseline, 2)) + "%")
 
 # Spearman Method
 elif method == 2:
