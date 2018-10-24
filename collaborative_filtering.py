@@ -23,6 +23,26 @@ for user in userIds:
     for movie in user_movies:
         user_rating_matrix[int(user)][int(movie)] = float(rating_dict[user][movie])
 
+mean_user_rating_dict = {}
+length = 0
+total_rating = 0
+for user in userIds:
+    total_user_rating = 0
+    temp_length = 0
+    for movie in movieIds:
+        if user_rating_matrix[int(user)][int(movie)] > 0:
+            total_user_rating = total_user_rating + user_rating_matrix[int(user)][int(movie)]
+            temp_length = temp_length + 1
+    total_rating = total_rating + total_user_rating
+    length = length + temp_length
+    mean_user_rating = round(total_user_rating / temp_length, 2)
+    mean_user_rating_dict[user]  = str(mean_user_rating)
+
+total_mean_rating = round(total_rating / length, 2)
+
+print(str(total_mean_rating))
+print(mean_user_rating_dict)
+
 method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking 3. RMSE: "))
 if method != 3:
     test_user = int(input("Enter userId: "))
