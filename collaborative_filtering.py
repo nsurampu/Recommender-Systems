@@ -99,7 +99,7 @@ if method == 1:
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
     top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
-    print(top_matches)
+    
     top_users = list(top_matches.keys())
 
     temp_numerator = 0
