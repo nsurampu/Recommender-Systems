@@ -1,7 +1,9 @@
 import pickle
 import math
 import scipy.stats as ss
+import numpy
 
+print("Unpickling data...")
 movie_pickle = open("movie_file.txt", 'rb')
 rating_pickle = open("rating_file.txt", 'rb')
 
@@ -17,25 +19,58 @@ user_rating_matrix = [0] * (len(userIds) + 1)
 for i in range(0, len(user_rating_matrix)):
     user_rating_matrix[i] = [0] * (last_movieId + 1)
 
+print("Creating user-rating matrix...")
 for user in userIds:
     user_movies = rating_dict[user].keys()
     for movie in user_movies:
         user_rating_matrix[int(user)][int(movie)] = float(rating_dict[user][movie])
 
-test_user = int(input("Enter userId: "))
-test_movie = int(input("Enter movieId: "))
-method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking: "))
-test_user_movies_dict = rating_dict[str(test_user)]
-test_user_movies = test_user_movies_dict.keys()
-mean_test_rating = 0
-test_user_rating = 0
-pearson_dict = {}
-last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
-
 # Baseline estimation
+print("Calculating mean ratings of users...")
+mean_user_rating_dict = {}
+length = 0
+total_rating = 0
+for user in userIds:
+    total_user_rating = 0
+    temp_length = 0
+    for movie in movieIds:
+        if user_rating_matrix[int(user)][int(movie)] > 0:
+            total_user_rating = total_user_rating + user_rating_matrix[int(user)][int(movie)]
+            temp_length = temp_length + 1
+    total_rating = total_rating + total_user_rating
+    length = length + temp_length
+    mean_user_rating = round(total_user_rating / temp_length, 2)
+    mean_user_rating_dict[user]  = str(mean_user_rating)
+
+print("Calculating mean ratings of movies...")
+mean_movie_rating_dict = {}
+for movie in movieIds:
+    movie_rating = 0
+    temp_length = 0
+    for user in userIds:
+        if user_rating_matrix[int(user)][int(movie)] > 0:
+            movie_rating = movie_rating + user_rating_matrix[int(user)][int(movie)]
+            temp_length = temp_length + 1
+            mean_movie_rating = round(movie_rating / temp_length, 2)
+    mean_movie_rating_dict[movie] = str(mean_movie_rating)
+
+total_mean_rating = round(total_rating / length, 2)
+
+#User input
+method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking 3. RMSE: "))
+if method != 3:
+    test_user = int(input("Enter userId: "))
+    test_movie = int(input("Enter movieId: "))
+    test_user_movies_dict = rating_dict[str(test_user)]
+    test_user_movies = test_user_movies_dict.keys()
+    mean_test_rating = 0
+    test_user_rating = 0
+    last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
 
 # K-neighbours method
 if method == 1:
+    test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
+    pearson_dict = {}
     for user in userIds:
         user = int(user)
         user_rating = 0
@@ -64,24 +99,32 @@ if method == 1:
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
     top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
-
+    
     top_users = list(top_matches.keys())
 
     temp_numerator = 0
     temp_denominator = 0
+    temp_numerator_baseline = 0
 
+    print("Predicting rating...")
     for user in top_users:
         if top_matches[user] != 1:
+            user_baseline = float(mean_user_rating_dict[str(user)]) - user_rating_matrix[user][test_movie]
+            temp_numerator_baseline = temp_numerator_baseline + (float(top_matches[user]) * (user_rating_matrix[user][test_movie] - user_baseline))
             temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
             temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = round((temp_numerator / temp_denominator), 2)
+    pred_rating = round(temp_numerator / temp_denominator, 2)
+    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
+    print("Predicted rating (baseline): " + str(pred_rating_baseline))
     if test_rating > 0:
         k_error = abs(pred_rating - test_rating) * (100 / (test_rating))
+        k_error_baseline = abs(pred_rating_baseline - test_rating) * (100 / test_rating)
         print("Actual rating: " + str(test_rating))
         print("Closeness for k-neigbours: " + str(100 - round(k_error, 2)) + "%")
+        print("Closeness for k-neighbours (baseline): " + str(100 - round(k_error_baseline, 2)) + "%")
 
 # Spearman Method
 elif method == 2:
@@ -102,8 +145,8 @@ elif method == 2:
     user_movies_ranks = {}
 
     for user in temp_user_rating_dict.keys():
-        test_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_test_rating_dict[user]])
-        user_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_user_rating_dict[user]])
+        test_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_test_rating_dict[user]])   # Check code later
+        user_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_user_rating_dict[user]])   # Check here also
 
     spearman_dict = {}
     users = test_movies_ranks.keys()
@@ -136,3 +179,41 @@ elif method == 2:
         spearman_error = abs(pred_rating - test_rating) * (100 / (test_rating))
         print("Actual rating: " + str(test_rating))
         print("Closeness for Spearman ranking: " + str(100 - round(spearman_error, 2)) + "%")
+
+# Root Mean Square Error
+elif method == 3:
+    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.8*len(userIds))))
+    temp_userIds = list(userIds)
+    test_users = []
+    for i in range(0, len(temp_userIds)):
+        if(int(temp_userIds[i]) not in train_users):
+            test_users.append(int(temp_userIds[i]))
+    errors = []
+    for test_user in test_users:
+        print("*****  Test user: " + str(test_user) + "  *****")
+        similarity = []
+        sim_train_user_vector = [[]]
+        test_user_vector = user_rating_matrix[int(test_user)]
+        temp_rx_array = numpy.array(test_user_vector)
+        rx_mag = round(numpy.linalg.norm(temp_rx_array), 2)
+        for train_user in train_users:
+            print("Train user: " + str(train_user))
+            train_user_vector = user_rating_matrix[int(train_user)]
+            temp_numerator = 0
+            for i in range(0, len(train_user_vector)):
+                temp_numerator = temp_numerator + (test_user_vector[i] * train_user_vector[i])
+            temp_ry_array = numpy.array(train_user_vector)
+            ry_mag = round(numpy.linalg.norm(temp_ry_array), 2)
+            temp_sim = temp_numerator/ (rx_mag * ry_mag)
+            sim = round(temp_sim, 2)
+            similarity.append(sim)
+            sim_train_user_vector.append([round((sim * r), 2) for r in train_user_vector])
+        temp_numerator = [sum([row[i] for row in sim_train_user_vector]) for i in range(0,len(sim_train_user_vector[0]))]
+        temp_denominator = sum(similarity)
+        pred_rating = [numerator / temp_denominator for numerator in temp_numerator]
+        for i in range(0, len(test_user_vector)):
+            errors.append(round((pred_rating[i] - test_user_vector[i]) ** 2), 2)
+        print("\n")
+
+    rms_error = round((sum(errors) / len(errors)), 2)
+    print("RMSE of recommender system: " + str(rms_error))
