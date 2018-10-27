@@ -53,7 +53,10 @@ for movie in movieIds:
         if user_rating_matrix[int(user)][int(movie)] > 0:
             movie_rating = movie_rating + user_rating_matrix[int(user)][int(movie)]
             temp_length = temp_length + 1
-            mean_movie_rating = round(movie_rating / temp_length, 2)
+    if temp_length > 0:
+        mean_movie_rating = round(movie_rating / temp_length, 2)
+    else:
+        mean_movie_rating = 0
     mean_movie_rating_dict[str(movie)] = str(mean_movie_rating)
 
 total_mean_rating = round(total_rating / length, 2)
@@ -101,7 +104,7 @@ if method == 1:
 
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
-    top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
+    top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}   # Taking 5 nearest neighbours
 
     top_users = list(top_matches.keys())
 
@@ -253,13 +256,14 @@ elif method == 3:
                 temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
                 temp_denominator = temp_denominator + float(top_matches[user])
 
-        pred_rating = round(temp_numerator / temp_denominator, 2)
-        pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
-        test_rating = user_rating_matrix[test_user][test_movie]
-        error = (pred_rating - test_rating) ** 2
-        error_baseline = (pred_rating_baseline - test_rating) ** 2
-        errors.append(round(error, 2))
-        errors_baseline.append(round(error_baseline, 2))
+        if temp_denominator > 0:
+            pred_rating = round(temp_numerator / temp_denominator, 2)
+            pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+            test_rating = user_rating_matrix[test_user][test_movie]
+            error = (pred_rating - test_rating) ** 2
+            error_baseline = (pred_rating_baseline - test_rating) ** 2
+            errors.append(round(error, 2))
+            errors_baseline.append(round(error_baseline, 2))
 
     rms_error = round(math.sqrt((round((sum(errors) / len(errors)), 2))), 2)
     rms_error_baseline = round(math.sqrt(round((sum(errors_baseline) / len(errors_baseline)), 2)), 2)
