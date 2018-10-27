@@ -17,11 +17,16 @@ for row in movie_reader:
 for row in rating_reader:
     rating_dict[row['userId']][row['movieId']] = row['rating']
 
-movie_size = 2000           #INCLUSIVE OF 2000th movie
-user_size = 1500            #INCLUSIVE OF 1500th movie
+movie_size = 200           #INCLUSIVE OF 2000th movie
+user_size = 150            #INCLUSIVE OF 1500th movie
 
 new_movie_dict ={}
 new_rating_dict ={}
+
+#START PARAMETERS
+start_movie = 2001
+start_user = 611
+
 
 real_key = 1
 for i in movie_dict.keys():
@@ -41,18 +46,18 @@ final_movie_dict= {}
 fresh_rating_dict ={}
 final_rating_dict = {}
 for i in new_movie_dict.keys():
-    if(int(str(i),10) <= movie_size):
+    if(int(str(i),10) <= movie_size+start_movie and int(str(i),10) >=start_movie):
         final_movie_dict[i] = new_movie_dict[i]
 
 for i in new_rating_dict.keys():
-    if(int(str(i),10) <= user_size):
+    if(int(str(i),10) <= user_size+start_user and int(str(i),10) >=start_user):
         fresh_rating_dict[i] = new_rating_dict[i]
 
 for i in fresh_rating_dict.keys():
     rating_list = fresh_rating_dict[i]
     new_rating_list ={}
     for j in rating_list.keys():
-        if(int(str(j),10)<= user_size):
+        if(int(str(j),10) <= user_size+start_user and int(str(j),10) >=start_user):
             new_rating_list[j] = rating_list[j]
     final_rating_dict[i] = new_rating_list
 
@@ -61,8 +66,8 @@ for i in fresh_rating_dict.keys():
 #     print(i,final_rating_dict[i])
 
 #Saving
-movie_dict_file = open("movie_file.txt", 'wb')
-rating_dict_file = open("rating_file.txt", 'wb')
+movie_dict_file = open("movie_file_test.txt", 'wb')
+rating_dict_file = open("rating_file_test.txt", 'wb')
 
 pickle.dump(final_movie_dict, movie_dict_file)
 pickle.dump(final_rating_dict ,rating_dict_file)

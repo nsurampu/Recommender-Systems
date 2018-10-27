@@ -2,94 +2,94 @@ import pickle
 import math
 import numpy as np
 import os
+from cur import cur_decomposition
 np.set_printoptions(threshold=np.inf)
+np.random.seed(30)
 
-def CUR(user_rating_matrix,recomputeMatrix=False):
+'''
+Takes the user rating matrix and returns the computed C, U and R matrices.
+If it finds that the file CUR_Matrices.txt already exists, it unpickles it and returns them,
+else it computes them, pickles them and then returns them, You can recompute these matrices 
+using the boolean flag recomputeMatrix .
+
+Parameters:
+-----------
+A : matrix that has to be decomposed
+recomputeMatrix : as name suggests, recompute the decomposition matrices, pickle them and return the matrices 
+
+returns:
+--------
+matrices C,U,R
+
+'''
+
+def CUR(A,num_dimensions,recomputeMatrix=False):
     
     file = 'CUR_Matrices.txt'
 
     if recomputeMatrix or not os.path.exists(file):
-        # prob dist along column
-        p_column = np.power(np.sum(user_rating_matrix,axis=0),2)/np.power(np.sum(user_rating_matrix),2)
-        num_columns = 607 # found experimentally.. assuming equal to the rank of the matrix
-        column_counter = 0 # number of columns added to the array
-        column_repetition = dict()
-        column_positions = dict()
-
-        for i in range(user_rating_matrix.shape[1]):
-            column_repetition[i] = 0 
-
-        while column_counter < num_columns:
-            candidate_column = np.argmax(p_column)
-            if column_repetition[candidate_column] == 0:
-                temp = np.reshape(user_rating_matrix[:,candidate_column],(user_rating_matrix.shape[0],1))
-                temp = temp/np.sqrt(num_columns*p_column[candidate_column])
-                if column_counter == 0:
-                    C = temp
-                elif column_counter == 1: # first column or second column have issues
-                    C = np.reshape(C,(user_rating_matrix.shape[0],1))
-                    C = np.hstack((C,temp))
-                else:
-                    C = np.hstack((C,temp))
-                column_repetition[candidate_column] += 1
-                column_positions[candidate_column] = column_counter
-                column_counter += 1
-                continue
-
-            elif column_repetition[candidate_column] >= 1:
-                position_of_column = column_positions[candidate_column]
-                column_repetition[candidate_column] += 1
-                p_column[candidate_column] = p_column[candidate_column]/np.sqrt(column_repetition[candidate_column])
-                multiply = np.ones(C.shape)
-                multiply[:,position_of_column] = np.sqrt(column_repetition[candidate_column])
-                C = C*multiply
-        print('C computed')        
-
-        num_rows = 607 # found experimentally
-        p_rows = np.power(np.sum(user_rating_matrix,axis=1),2)/np.power(np.sum(user_rating_matrix),2)
-        row_counter = 0
-        row_repetition = dict()
-        row_positions = dict()
+        
+        num_rows = num_columns = num_dimensions
     
+        # Computing C matrix
+        temp = np.power(A,2)
+        p_column = np.sum(temp,axis=0)/np.sum(temp)
+        selected_columns = np.random.choice(A.shape[1],size=num_columns,p=p_column)
+        # selected_columns = np.random.choice(A.shape[1],replace=False,size=num_columns,p=p_column)
+        temp_C = A[:,selected_columns]
+        column_scaling_factor = np.sqrt(p_column[selected_columns] * num_columns) 
+        # print(temp_C.shape,len(column_scaling_factor))
+        C = temp_C/column_scaling_factor
+        # print('C computed')
 
-        for i in range(user_rating_matrix.shape[0]):
-            row_repetition[i] = 0
-
-        while row_counter < num_rows:
-            candidate_row = np.argmax(p_rows)
-            if row_repetition[candidate_row] == 0:
-                temp = np.reshape(user_rating_matrix[candidate_row,:],(1,user_rating_matrix.shape[1]))
-                temp = temp/np.sqrt(num_rows*p_rows[candidate_row])
-                if row_counter == 0:
-                    R = temp
-                elif row_counter == 1: # first column or second column have issues
-                    R = np.reshape(R,(1,user_rating_matrix.shape[1]))
-                    R = np.vstack((R,temp))
-                else:
-                    R = np.vstack((R,temp))
-                row_repetition[candidate_row] += 1
-                row_positions[candidate_row] = row_counter
-                row_counter += 1
-                continue
-
-            elif row_repetition[candidate_row] >= 1:
-                position_of_row = row_positions[candidate_row]
-                row_repetition[candidate_row] += 1
-                p_rows[candidate_row] = p_rows[candidate_row]/np.sqrt(row_repetition[candidate_row])
-                multiply = np.ones(R.shape)
-                multiply[position_of_row,:] = np.sqrt(row_repetition[candidate_row])
-                R = R*multiply
-        print('R computed')
+        # Computing R matrix
+        temp = np.power(A,2)
+        p_rows = np.sum(temp,axis=1)/np.sum(temp)
+        # selected_rows = np.random.choice(A.shape[0],replace=False,size=num_rows,p=p_rows)
+        selected_rows = np.random.choice(A.shape[0],size=num_rows,p=p_rows)
+        temp_R = A[selected_rows,:].T
+        rows_scaling_factor = np.sqrt(p_rows[selected_rows] * num_rows)
+        R = temp_R/rows_scaling_factor
+        R = R.T
+        # print('R ',R.shape)
+        # print('R computed')
 
         # compute U
-        
-
-
+        W = A[selected_rows,:][:,selected_columns]
+        # SVD for W
+        W_WT = np.dot(W,W.T)
+        WT_W = np.dot(W.T,W)
+        # eigenvalue decomposition of W WT
+        eigenvalues_W_WT, X = np.linalg.eig(W_WT)
+        # print(eigenvalues_W_WT)
+        idx = np.argsort(eigenvalues_W_WT)
+        idx = idx[::-1]
+        eigenvalues_W_WT = eigenvalues_W_WT[idx]
+        eigenvalues_W_WT[np.abs(eigenvalues_W_WT) <= 1e-10] = 0
+        X = X[:,idx]  
+        X = X.real
+        # eigenvalue decomposition of WT W
+        eigenvalues_WT_W, Y = np.linalg.eig(WT_W)
+        idx = np.argsort(eigenvalues_WT_W)
+        idx = idx[::-1]
+        eigenvalues_WT_W = eigenvalues_WT_W[idx]
+        eigenvalues_WT_W[np.abs(eigenvalues_WT_W) <= 1e-10] = 1e200
+        # print(eigenvalues_WT_W[eigenvalues_WT_W == 0])
+        Y = Y[:,idx]
+        Y = Y.real
+        Z_plus = np.eye(eigenvalues_WT_W.shape[0])
+        Z_plus = Z_plus*1/eigenvalues_WT_W
+        Z_plus[Z_plus == 1e-200] = 0 
+        U = np.dot(Y,Z_plus)
+        U = np.dot(U,X.T)
+        U = U.real
         # save file
         with open(file,'wb') as f:
             data = {}
             data['C'] = C
             data['R'] = R
+            data['U'] = U            
+            # save pickled data
             pickle.dump(data,f)
     else:
         with open(file,'rb') as f:
@@ -97,7 +97,30 @@ def CUR(user_rating_matrix,recomputeMatrix=False):
             print('done')
             C = data['C']
             R = data['R']
-            print(C.shape,R.shape)       
+            U = data['U']
+            # print(C.shape,R.shape,U.shape) 
+
+    return C,U,R
+'''
+Calculates the reconstruction error incurred after CUR decomposition
+
+Parameters:
+-----------
+A: original matrix
+C,U,R: matrices obtained after decomposition
+
+returns:
+--------
+error: reconstruction error incurred while decomposing
+
+'''
+def reconstructionError(originalMatrix,C,U,R):
+    reconstructedMatrix = np.dot(C,U)
+    reconstructedMatrix = np.dot(reconstructedMatrix,R)
+
+    error = np.sum(np.power((originalMatrix-reconstructedMatrix),2))
+    error = np.power(error,0.5)
+    return error
 
 if __name__=='__main__':
     movie_size = 2000           #INCLUSIVE OF 2000th movie
@@ -123,4 +146,28 @@ if __name__=='__main__':
             user_rating_matrix[int(user)][int(movie)] = float(rating_dict[user][movie])
 
     user_rating_matrix = np.array(user_rating_matrix)
-    CUR(user_rating_matrix,recomputeMatrix=True)
+    min_error = 1e50
+    min_error_index = 100
+    # for i in range(1,100):
+    #     C,U,R = CUR(user_rating_matrix,605,recomputeMatrix=True)  # found experimentally.. assuming equal to the rank of the matrix
+    #     error = reconstructionError(user_rating_matrix,C,U,R)
+    #     if error < min_error:
+    #         min_error = error
+    #         min_error_index = i
+    #     print(min_error,i)
+        
+    # print(min_error,min_error_index)
+    C,U,R = CUR(user_rating_matrix,605,recomputeMatrix=True)
+    error = reconstructionError(user_rating_matrix,C,U,R)
+    new_A = np.dot(np.dot(C,U),R)
+    print('\n\n',user_rating_matrix[:10,:10])
+    print(new_A[:10,:10])
+    print('\n\n')
+    print('error my implementation ',error)
+    size_of_U = 370   # found experimentally
+    C,U,R = cur_decomposition(user_rating_matrix,size_of_U)
+    error = reconstructionError(user_rating_matrix,C,U,R)
+    print('error library ',error)
+    # new_A = np.dot(np.dot(C,U),R)
+    # print(user_rating_matrix[:10,:10])
+    # print(new_A[:10,:10])
