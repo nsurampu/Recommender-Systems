@@ -40,8 +40,9 @@ for user in userIds:
             temp_length = temp_length + 1
     total_rating = total_rating + total_user_rating
     length = length + temp_length
-    mean_user_rating = round(total_user_rating / temp_length, 2)
-    mean_user_rating_dict[user]  = str(mean_user_rating)
+    if temp_length > 0:
+        mean_user_rating = round(total_user_rating / temp_length, 2)
+        mean_user_rating_dict[user]  = str(mean_user_rating)
 
 print("Calculating mean ratings of movies...")
 mean_movie_rating_dict = {}
@@ -53,7 +54,7 @@ for movie in movieIds:
             movie_rating = movie_rating + user_rating_matrix[int(user)][int(movie)]
             temp_length = temp_length + 1
             mean_movie_rating = round(movie_rating / temp_length, 2)
-    mean_movie_rating_dict[movie] = str(mean_movie_rating)
+    mean_movie_rating_dict[str(movie)] = str(mean_movie_rating)
 
 total_mean_rating = round(total_rating / length, 2)
 
