@@ -190,12 +190,13 @@ elif method == 2:
 
 # Root Mean Square Error
 elif method == 3:
-    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.8*len(userIds))))
+    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.5*len(userIds))))
     temp_userIds = list(userIds)
     test_users = []
     for i in range(0, len(temp_userIds)):
         if(int(temp_userIds[i]) not in train_users):
             test_users.append(int(temp_userIds[i]))
+    test_users = list(numpy.random.randint(1, len(test_users), size=int(0.2*len(userIds))))
     errors = []
     for test_user in test_users:
         print("*****  Test user: " + str(test_user) + "  *****")
@@ -219,8 +220,7 @@ elif method == 3:
         temp_numerator = [sum([row[i] for row in sim_train_user_vector]) for i in range(0,len(sim_train_user_vector[0]))]
         temp_denominator = sum(similarity)
         pred_rating = [numerator / temp_denominator for numerator in temp_numerator]
-        for i in range(0, len(test_user_vector)):
-            errors.append(round((pred_rating[i] - test_user_vector[i]) ** 2), 2)
+        errors.append(round((pred_rating - test_user_vector) ** 2), 2)
         print("\n")
 
     rms_error = round((sum(errors) / len(errors)), 2)
