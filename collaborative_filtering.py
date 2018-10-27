@@ -71,6 +71,7 @@ if method != 3:
 if method == 1:
     test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
     pearson_dict = {}
+    print("Calculating similarities...")
     for user in userIds:
         user = int(user)
         user_rating = 0
@@ -99,7 +100,7 @@ if method == 1:
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
     top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
-    
+
     top_users = list(top_matches.keys())
 
     temp_numerator = 0
@@ -128,6 +129,7 @@ if method == 1:
 
 # Spearman Method
 elif method == 2:
+    test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
     temp_test_rating_dict = {}
     temp_user_rating_dict = {}
     for user in userIds:
@@ -144,17 +146,15 @@ elif method == 2:
     test_movies_ranks = {}
     user_movies_ranks = {}
 
+    print("Calculating ranks...")
     for user in temp_user_rating_dict.keys():
         test_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_test_rating_dict[user]])   # Check code later
         user_movies_ranks[user] = ss.rankdata([-1 * user for user in temp_user_rating_dict[user]])   # Check here also
 
     spearman_dict = {}
     users = test_movies_ranks.keys()
-    sq_d = 0
-    for rank in range(0, len(temp_test_rating_dict['3'])):
-        sq_d = sq_d + (test_movies_ranks['3'][rank] - user_movies_ranks['3'][rank]) ** 2
-        result = 1 - ((6 * sq_d) / (len(temp_test_rating_dict['3']) * ((len(temp_test_rating_dict['3']) ** 2))))
 
+    print("Calculating similarities...")
     for user in users:
         sq_d = 0
         if len(temp_test_rating_dict[user]) > 0:
@@ -165,29 +165,38 @@ elif method == 2:
 
     temp_numerator = 0
     temp_denominator = 0
+    temp_numerator_baseline = 0
 
     for user in users:
         if len(temp_test_rating_dict[user]) > 0:
             if user is not str(test_user) and abs(float(spearman_dict[user])) > 0.35:
+                user_baseline = float(mean_user_rating_dict[user]) - user_rating_matrix[int(user)][test_movie]
+                temp_numerator_baseline = temp_numerator_baseline + (float(spearman_dict[user]) * (user_rating_matrix[int(user)][test_movie] - user_baseline))
                 temp_numerator = temp_numerator + (float(spearman_dict[user]) * user_rating_matrix[int(user)][test_movie])
                 temp_denominator = temp_denominator + float(spearman_dict[user])
 
+    print("Predicting rating...")
     pred_rating = round((temp_numerator / temp_denominator), 2)
+    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
+    print("Predicted rating (baseline): " + str(pred_rating_baseline))
     if test_rating > 0:
         spearman_error = abs(pred_rating - test_rating) * (100 / (test_rating))
+        spearman_error_baseline = abs(pred_rating_baseline - test_rating) * (100 / test_rating)
         print("Actual rating: " + str(test_rating))
         print("Closeness for Spearman ranking: " + str(100 - round(spearman_error, 2)) + "%")
+        print("Closeness for Spearman ranking (baseline): " + str(100 - round(spearman_error_baseline, 2)) + "%")
 
 # Root Mean Square Error
 elif method == 3:
-    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.8*len(userIds))))
+    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.5*len(userIds))))
     temp_userIds = list(userIds)
     test_users = []
     for i in range(0, len(temp_userIds)):
         if(int(temp_userIds[i]) not in train_users):
             test_users.append(int(temp_userIds[i]))
+    test_users = list(numpy.random.randint(1, len(test_users), size=int(0.2*len(userIds))))
     errors = []
     for test_user in test_users:
         print("*****  Test user: " + str(test_user) + "  *****")
@@ -211,8 +220,7 @@ elif method == 3:
         temp_numerator = [sum([row[i] for row in sim_train_user_vector]) for i in range(0,len(sim_train_user_vector[0]))]
         temp_denominator = sum(similarity)
         pred_rating = [numerator / temp_denominator for numerator in temp_numerator]
-        for i in range(0, len(test_user_vector)):
-            errors.append(round((pred_rating[i] - test_user_vector[i]) ** 2), 2)
+        errors.append(round((pred_rating - test_user_vector) ** 2), 2)
         print("\n")
 
     rms_error = round((sum(errors) / len(errors)), 2)
