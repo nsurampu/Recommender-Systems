@@ -1,13 +1,34 @@
 import pickle
 import math
 import numpy as np
+import random
 np.set_printoptions(threshold=np.inf)
 
+
 def Energy(A):
+    """
+    This function calculates the energy of the matrix.
+
+    @type  A: Square matrix (numpy Array)
+    @param A: Matrix for which energy must be calculated
+    @rtype:   number
+    @return: Energy of the matrix
+    """
     A = A*A
     return A.sum()
 
+
 def RMSE(user_array,FinalA):
+    """
+    This function calculates the Root-Mean-Square-Error value obtained between two matrices
+
+    @type  user_array: Square matrix (numpy Array)
+    @param user_array: The original matrix before SVD decomposition
+    @type  FinalA: Square matrix (numpy Array)
+    @param FinalA: The matrix after SVD decomposition
+    @rtype:  number
+    @return: Root-Mean-Square-Error value obtained
+    """
     error = user_array - FinalA
     # error = error[1:,:]
     sqerror = error*error
@@ -17,6 +38,14 @@ def RMSE(user_array,FinalA):
     return RMSE
 
 def SVD(user_array):
+    """
+    This function calculates the SVD decomposition of a given matrix
+
+    @type  user_array: Square matrix (numpy Array)
+    @param user_array: The original matrix before SVD decomposition
+    @rtype: Tuple of (Square matrix,Square matrix,Square matrix,Square matrix)
+    @return: Tuple of U , sigma , V ,& the obtained eigenvalues
+    """
     UAT = user_array.T
     array_AAT = np.dot(user_array, (UAT))
     eigenvalues, eigenvectors_AAT = np.linalg.eig(array_AAT)
@@ -33,7 +62,6 @@ def SVD(user_array):
         if(i.imag != 0):
             break
     rank = rank -1
-    rank = 610
     print("Rank: ",rank)
     # Rank = Row that contains last non zero value
     #Reducing size of eigenvalues to only include the actual rank
@@ -58,32 +86,76 @@ def SVD(user_array):
     return U,sigma,V,eigenvalues
 
 def Query(q,V):
-    #Calculates the query result given a
+    """
+    This function queries the SVD matrix given a query vector
+
+    @type  q: Square matrix (1D) (numpy Array)
+    @param q: Query vector
+    @type  V: Square matrix (numpy Array)
+    @param V: The V obtained from the SVD
+    @rtype: Square matrix (1D) (numpy Array)
+    @return: The result vector obtained
+    """
     temp = np.dot(q,V)
     final = np.dot(temp,V.T)
     return final
 
 def Precision_top_k(k,q,V):
+    """
+    This function calculates the Precision Top K
+
+    @type  k : number
+    @param k : The k in Precision Top k
+    @type q: Square matrix (1D) (numpy Array)
+    @para q: Query Vector
+    @type  V: Square matrix (numpy Array)
+    @param V: The V obtained from the SVD
+    @rtype:  number
+    @return: Precision Top K value obtained
+    """
     final = Query(q,V)
-    print(final.shape)
+    # print("F,q Shape",final.shape,q.shape)
     final[final < 3.5] = 0
     final[final > 3.5] = 1
     q[q < 3.5] = 0
     q[q > 3.5] = 1
     idx = final.argsort()[::-1]
     final = final[idx]
-    q = q[:,idx]
+    q = q[idx]
     prec_val = 0
+    # for i in range(0,final.shape[0]):
+    #     print(final[i],q[i])
     for i in range(0,k-1):
-        if(final[i,0] == 1 and q[i,0] == 1):
+        if((final[i] == 1 and q[i] == 1) or (final[i] == 0 and q[i] == 0)):
             prec_val +=1
     prec_val = prec_val / k
     return prec_val
 
+def spearmanCoefficient(predicted_rating,test_rating):
+    """
+    This function calculates the Spearman Coefficient
+
+    @type  predicted_rating: Square matrix (1D) (numpy Array)
+    @param predicted_rating: The Predicted rating obtained through Querying
+    @type  test_rating: Square matrix (1D) (numpy Array)
+    @param test_rating: The actual list of ratings given by a user
+    @rtype:  number
+    @return: Spearman Coefficient obtained
+    """
+    predicted_rank = np.argsort(predicted_rating)
+    test_rank = np.argsort(test_rating)
+    d = test_rank - predicted_rank
+    d_squared = np.power(d,2)
+    sum_d_squared = np.sum(d_squared)
+    n = d.shape[0]
+    rho = 1 - (6*sum_d_squared)/(n*(n**2 - 1))
+    return rho
+
 
 
 movie_size = 2000  # INCLUSIVE OF 2000th movie
-user_size = 1500  # INCLUSIVE OF 1500th movie
+user_size = 610  # INCLUSIVE OF 1500th movie
+test_shift = 10
 
 movie_pickle = open("movie_file.txt", 'rb')
 rating_pickle = open("rating_file.txt", 'rb')
@@ -105,8 +177,9 @@ for user in userIds:
         user_rating_matrix[int(user)][int(movie)] = float(
             rating_dict[user][movie])
 
-user_array = np.array(user_rating_matrix)
-user_array = user_array[1:,:]
+user_array_store = np.array(user_rating_matrix)
+test_array = user_array_store[user_size-test_shift:,:]
+user_array = user_array_store[1:(user_size-test_shift),:]
 
 U,sigma,V,eigenvalues = SVD(user_array)
 
@@ -118,16 +191,6 @@ FinalA = np.dot(new_A,VT)
 
 print(FinalA.shape)
 
-u,s,v = np.linalg.svd(user_array, full_matrices=True)
-# print(u)
-sn = np.diag(s)
-n = np.dot(u,sn)
-print("SVD Funct",u.shape,n.shape,sn.shape,v.shape)
-v = v[:,0:610]
-al = np.dot(n,v.T)
-print("SVD FUNCT",RMSE(user_array,al))
-
-
 energy = Energy(eigenvalues)
 # Reverse the eigenvalue np array
 Reduction_array = np.empty([1])
@@ -137,13 +200,14 @@ for i in range(eigenvalues.size,0,-1):
     if(temp_Energy >= 0.9 * energy):
         Reduction_array = temp
     else:
-        break    
+        break
 
-
+#90% Reduced Matrix size
 size = Reduction_array.size
 print(size)
 Reduction_array = Reduction_array[0:(size-1)]
 Reduction_array = Reduction_array.real
+#Remake the sigma
 sigma_reduced = np.diag(Reduction_array)
 U_reduced = U[:,0:(size-1)]
 V_reduced = V[:,0:(size-1)]
@@ -154,6 +218,18 @@ ReducedA = np.dot(new_A_reduced,VT_reduced)
 
 print("Non reduced",RMSE(user_array,FinalA))
 print("90% reduced",RMSE(user_array,ReducedA))
+
+# randvar =random.randint(0,1000)
+# q = user_array[randvar,:]
+q = test_array[1,:]
+# print(q)
+print("Precision_top_10: ",Precision_top_k(10,q,V))
+print("Precision_top_10 (90% reduced): ",Precision_top_k(10,q,V_reduced))
+predicted_rating = Query(q,V)
+predicted_rating_reduced = Query(q,V_reduced)
+print("Spearman Coeff:",spearmanCoefficient(predicted_rating,q))
+print("Spearman Coeff (90% reduced):",spearmanCoefficient(predicted_rating_reduced,q))
+
 
 U_file = open("U_file.txt", 'wb')
 V_file = open("V_file.txt", 'wb')
@@ -175,6 +251,8 @@ U_file.close()
 V_file.close()
 sigma_file.close()
 
+movie_pickle.close()
+rating_pickle.close()
 
 pickle.dump(U_reduced, U_reduced_file)
 pickle.dump(V_reduced, V_reduced_file)

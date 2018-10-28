@@ -2,7 +2,6 @@ import pickle
 import math
 import numpy as np
 import os
-from cur import cur_decomposition
 import time
 np.set_printoptions(threshold=np.inf)
 np.random.seed(30)
@@ -10,13 +9,13 @@ np.random.seed(30)
 '''
 Takes the user rating matrix and returns the computed C, U and R matrices.
 If it finds that the file CUR_Matrices.txt already exists, it unpickles it and returns them,
-else it computes them, pickles them and then returns them, You can recompute these matrices 
+else it computes them, pickles them and then returns them, You can recompute these matrices
 using the boolean flag recomputeMatrix .
 
 Parameters:
 -----------
 A : matrix that has to be decomposed
-recomputeMatrix : as name suggests, recompute the decomposition matrices, pickle them and return the matrices 
+recomputeMatrix : as name suggests, recompute the decomposition matrices, pickle them and return the matrices
 
 returns:
 --------
@@ -25,23 +24,23 @@ matrices C,U,R
 '''
 
 def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
-    
+
     if energy_needed > 1:
         raise Exception('energy_needed should not exceed 1. The value of energy_needed was: {}'.format(energy_needed))
 
     file = 'CUR_Matrices.txt'
 
     if recomputeMatrix or not os.path.exists(file):
-        
+
         num_rows = num_columns = num_dimensions
-    
+
         # Computing C matrix
         temp = np.power(A,2)
         p_column = np.sum(temp,axis=0)/np.sum(temp)
         selected_columns = np.random.choice(A.shape[1],size=num_columns,p=p_column)
         # selected_columns = np.random.choice(A.shape[1],replace=False,size=num_columns,p=p_column)
         temp_C = A[:,selected_columns]
-        column_scaling_factor = np.sqrt(p_column[selected_columns] * num_columns) 
+        column_scaling_factor = np.sqrt(p_column[selected_columns] * num_columns)
         # print(temp_C.shape,len(column_scaling_factor))
         C = temp_C/column_scaling_factor
         print('C computed')
@@ -69,7 +68,7 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
         idx = idx[::-1]
         eigenvalues_W_WT = eigenvalues_W_WT[idx]
         eigenvalues_W_WT[np.abs(eigenvalues_W_WT) <= 1e-10] = 0
-        X = X[:,idx]  
+        X = X[:,idx]
         X = X.real
         # eigenvalue decomposition of WT W
         eigenvalues_WT_W, Y = np.linalg.eig(WT_W)
@@ -81,14 +80,14 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
         Y = Y.real
 
         # energy based selection, if necessary that is...
-        if energy_needed != 1:        
+        if energy_needed != 1:
             variances =  np.power(eigenvalues_W_WT,2)
             variances = variances.real
             total_energy = np.sum(variances)
             total_energy = total_energy.real
             # print('total energy ',total_energy)
             # print(variances[:10])
-            
+
             index_to_slice = 0
 
             for i in range(variances.shape[0]):
@@ -103,7 +102,7 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
 
         Z_plus = np.eye(eigenvalues_WT_W.shape[0])
         Z_plus = Z_plus*1/eigenvalues_WT_W
-        Z_plus[Z_plus == 1e-200] = 0 
+        Z_plus[Z_plus == 1e-200] = 0
         U = np.dot(Y,Z_plus)
         U = np.dot(U,X.T)
         U = U.real
@@ -113,13 +112,13 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
             data = {}
             data['C'] = C
             data['R'] = R
-            data['U'] = U     
-            data['eigenvalues'] = eigenvalues_WT_W       
+            data['U'] = U
+            data['eigenvalues'] = eigenvalues_WT_W
             # save pickled data
             pickle.dump(data,f)
     else:
         with open(file,'rb') as f:
-            data = pickle.load(f) 
+            data = pickle.load(f)
             print('done')
             C = data['C']
             R = data['R']
@@ -156,7 +155,7 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
     #     ReducedA = np.dot(new_A_reduced,RT_reduced)
     #     print(ReducedA.shape)
     #     print(user_rating_matrix.shape)
-        
+
     return C,U,R,eigenvalues_WT_W
 
 
@@ -207,7 +206,7 @@ def precisionTopK(k,q,R):
     prec_val = prec_val / k
     return prec_val
 
-''' 
+'''
 
 '''
 def spearmanCoefficient(predicted_rating,test_rating):
@@ -225,7 +224,7 @@ def spearmanCoefficient(predicted_rating,test_rating):
 
 def Energy(A):
     A = A*A
-    return A.sum()    
+    return A.sum()
 
 if __name__=='__main__':
     movie_size = 2000           #INCLUSIVE OF 2000th movie
@@ -253,7 +252,7 @@ if __name__=='__main__':
     user_rating_matrix = np.array(user_rating_matrix)
 
     # calculating best size (number of columns for fitting the data)
-    
+
     # min_error = 1e50
     # min_error_index = 0
     # for i in range(1,user_rating_matrix.shape[0]):
@@ -269,7 +268,7 @@ if __name__=='__main__':
     error = rmse(user_rating_matrix,C,U,R)
     new_A = np.dot(np.dot(C,U),R)
     print('error my implementation ',error)
-    
+
     # size_of_U = 370   # found experimentally
     # C,U,R = cur_decomposition(user_rating_matrix,size_of_U)
     # error = rmse(user_rating_matrix,C,U,R)

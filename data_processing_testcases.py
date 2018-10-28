@@ -24,8 +24,8 @@ new_movie_dict ={}
 new_rating_dict ={}
 
 #START PARAMETERS
-start_movie = 2001
-start_user = 611
+start_movie = 1201
+start_user = 1001
 
 
 real_key = 1

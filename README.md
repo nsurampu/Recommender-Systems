@@ -28,14 +28,14 @@ $ python collaborative_filtering.py
 
 ### Results during runs
 
-System | RMSE | Precision on top K | Spearman Ranking
+System | RMSE | Precision on top K | Spearman Ranking | Time
 --- | --- | --- | --- | ---
-Collaborative filtering | 0.9 | 72% | 40%
-Collaborative filtering (baseline) | 3.6 | 65% | 26%
-SVD | | |
-SVD (90% Energy) | | |
+Collaborative filtering | 0.9 | 72% | 40% | 1.823s
+Collaborative filtering (baseline) | 3.6 | 65% | 26% | 1.823s
+SVD | 0.18 | 70% | 86% | 2.384s
+SVD (90% Energy) | 4.00 | 90% | 94% | 2.384s
 CUR | | |
-CUR (90% Energy) | | | 
+CUR (90% Energy) | | |
 
 ### Built With
 
