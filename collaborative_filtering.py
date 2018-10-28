@@ -65,7 +65,6 @@ total_mean_rating = round(total_rating / length, 2)
 method = int(input("Enter method: 1. K-neigbours 2. Spearman Ranking 3. RMSE: "))
 if method != 3:
     test_user = int(input("Enter userId: "))
-    test_movie = int(input("Enter movieId: "))
     test_user_movies_dict = rating_dict[str(test_user)]
     test_user_movies = test_user_movies_dict.keys()
     mean_test_rating = 0
@@ -74,66 +73,90 @@ if method != 3:
 
 # K-neighbours method
 if method == 1:
-    test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
-    pearson_dict = {}
-    print("Calculating similarities...")
-    for user in userIds:
-        user = int(user)
-        user_rating = 0
-        temp_numerator = 0
-        temp_denominator_x = 0
-        temp_denominator_y = 0
-        length = 0
-        for movie in range(0, last_movie):
-            if (user_rating_matrix[test_user][movie] > 0) and (user_rating_matrix[user][movie] > 0):
-                test_user_rating = test_user_rating + user_rating_matrix[test_user][movie]
-                user_rating = user_rating = user_rating + user_rating_matrix[user][movie]
-                length = length + 1
-        if length > 0:
-            mean_test_user_rating = test_user_rating / length
-            mean_user_rating = user_rating / length
-            for movie in range(1, last_movie):
+    test_user_rating_dict = rating_dict[str(test_user)]
+    sorted_test_rating_dict = {r: test_user_rating_dict[r] for r in sorted(test_user_rating_dict, key=test_user_rating_dict.get, reverse=True)}
+    top_test_movies = list(sorted_test_rating_dict.keys())
+    top_K = top_test_movies[0:5]
+    actual_ratings = []
+    pred_ratings = []
+    pred_ratings_baseline = []
+    print("Predicting ratings for top K ratings...")
+    for test_movie in top_K:
+        test_movie = int(test_movie)
+        test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
+        pearson_dict = {}
+        # print("Calculating similarities...")
+        for user in userIds:
+            user = int(user)
+            user_rating = 0
+            temp_numerator = 0
+            temp_denominator_x = 0
+            temp_denominator_y = 0
+            length = 0
+            for movie in range(0, last_movie):
                 if (user_rating_matrix[test_user][movie] > 0) and (user_rating_matrix[user][movie] > 0):
-                    temp_numerator = temp_numerator + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) * (user_rating_matrix[user][movie] - mean_user_rating))
-                    temp_denominator_x = temp_denominator_x + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) ** 2)
-                    temp_denominator_y = temp_denominator_y + ((user_rating_matrix[user][movie] - mean_user_rating) ** 2)
-            temp_denominator = math.sqrt(temp_denominator_x) * math.sqrt(temp_denominator_y)
-            if temp_denominator > 0:
-                coeff = temp_numerator / temp_denominator
-                pearson_dict[user] = coeff
+                    test_user_rating = test_user_rating + user_rating_matrix[test_user][movie]
+                    user_rating = user_rating = user_rating + user_rating_matrix[user][movie]
+                    length = length + 1
+            if length > 0:
+                mean_test_user_rating = test_user_rating / length
+                mean_user_rating = user_rating / length
+                for movie in range(1, last_movie):
+                    if (user_rating_matrix[test_user][movie] > 0) and (user_rating_matrix[user][movie] > 0):
+                        temp_numerator = temp_numerator + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) * (user_rating_matrix[user][movie] - mean_user_rating))
+                        temp_denominator_x = temp_denominator_x + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) ** 2)
+                        temp_denominator_y = temp_denominator_y + ((user_rating_matrix[user][movie] - mean_user_rating) ** 2)
+                temp_denominator = math.sqrt(temp_denominator_x) * math.sqrt(temp_denominator_y)
+                if temp_denominator > 0:
+                    coeff = temp_numerator / temp_denominator
+                    pearson_dict[user] = coeff
 
-    sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
+        sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
-    top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}   # Taking 5 nearest neighbours
+        top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}   # Taking 5 nearest neighbours
 
-    top_users = list(top_matches.keys())
+        top_users = list(top_matches.keys())
 
-    temp_numerator = 0
-    temp_denominator = 0
-    temp_numerator_baseline = 0
+        temp_numerator = 0
+        temp_denominator = 0
+        temp_numerator_baseline = 0
 
-    print("Predicting rating...")
-    for user in top_users:
-        if top_matches[user] != 1:
-            user_baseline = float(mean_user_rating_dict[str(user)]) - user_rating_matrix[user][test_movie]
-            temp_numerator_baseline = temp_numerator_baseline + (float(top_matches[user]) * (user_rating_matrix[user][test_movie] - user_baseline))
-            temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
-            temp_denominator = temp_denominator + float(top_matches[user])
+        # print("Predicting rating...")
+        for user in top_users:
+            if top_matches[user] != 1:
+                user_baseline = float(mean_user_rating_dict[str(user)]) - user_rating_matrix[user][test_movie]
+                temp_numerator_baseline = temp_numerator_baseline + (float(top_matches[user]) * (user_rating_matrix[user][test_movie] - user_baseline))
+                temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
+                temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = abs(round(temp_numerator / temp_denominator, 2))
-    pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
-    test_rating = user_rating_matrix[test_user][test_movie]
-    print("Predicted rating: " + str(pred_rating))
-    print("Predicted rating (baseline): " + str(pred_rating_baseline))
-    if test_rating > 0:
-        k_error = abs(pred_rating - test_rating) * (100 / (test_rating))
-        k_error_baseline = abs(pred_rating_baseline - test_rating) * (100 / test_rating)
-        print("Actual rating: " + str(test_rating))
-        print("Closeness for k-neigbours: " + str(100 - round(k_error, 2)) + "%")
-        print("Closeness for k-neighbours (baseline): " + str(100 - round(k_error_baseline, 2)) + "%")
+        pred_rating = abs(round(temp_numerator / temp_denominator, 2))
+        pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
+        test_rating = user_rating_matrix[test_user][test_movie]
+
+        pred_ratings.append(pred_rating)
+        pred_ratings_baseline.append(pred_rating_baseline)
+        actual_ratings.append(test_rating)
+    pres_count = 0
+    pres_count_baseline = 0
+    for i in range(0, len(actual_ratings)):
+        if actual_ratings[i] >= 3.5:
+            if pred_ratings[i] >= 3.5:
+                pres_count = pres_count + 1
+            if pred_ratings_baseline[i] >= 3.5:
+                pres_count_baseline = pres_count_baseline + 1
+        if actual_ratings[i] < 3.5:
+            if pred_ratings[i] < 3.5:
+                pres_count = pres_count + 1
+            if pred_ratings_baseline[i] < 3.5:
+                pres_count_baseline = pres_count_baseline + 1
+    precision = round((pres_count / len(actual_ratings)) * 100, 2)
+    precision_baseline = round((pres_count_baseline / len(actual_ratings)) * 100, 2)
+    print("Precision of top K: " + str(precision) + "%")
+    print("Precision of top K (baseline): " + str(precision_baseline) + "%")
 
 # Spearman Method
 elif method == 2:
+    test_movie = int(input("Enter movieId: "))
     test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
     temp_test_rating_dict = {}
     temp_user_rating_dict = {}
