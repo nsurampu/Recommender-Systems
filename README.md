@@ -30,12 +30,12 @@ $ python collaborative_filtering.py
 
 System | RMSE | Precision on top K | Spearman Ranking
 --- | --- | --- | --- | ---
-Collaborative filtering |
-Collaborative filtering (baseline) |
-SVD |
-SVD (90% Energy) |
-CUR |
-CUR (90% Energy) | 
+Collaborative filtering | 0.9 | 72% | 40%
+Collaborative filtering (baseline) | 3.6 | 65% | 26%
+SVD | | |
+SVD (90% Energy) | | |
+CUR | | |
+CUR (90% Energy) | | | 
 
 ### Built With
 
