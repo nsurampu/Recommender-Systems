@@ -26,6 +26,17 @@ collaborative_filtering.py : Implements the collaborative filtering recommender 
 $ python data_processing.py </br>
 $ python collaborative_filtering.py
 
+### Results during runs
+
+System | RMSE | Precision on top K | Spearman Ranking
+--- | --- | --- | --- | ---
+Collaborative filtering |
+Collaborative filtering (baseline) |
+SVD |
+SVD (90% Energy) |
+CUR |
+CUR (90% Energy) | 
+
 ### Built With
 
 The project uses
