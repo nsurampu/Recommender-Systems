@@ -2,6 +2,7 @@ import pickle
 import math
 import scipy.stats as ss
 import numpy
+import random
 
 print("Unpickling data...")
 movie_pickle = open("movie_file.txt", 'rb')
@@ -39,8 +40,9 @@ for user in userIds:
             temp_length = temp_length + 1
     total_rating = total_rating + total_user_rating
     length = length + temp_length
-    mean_user_rating = round(total_user_rating / temp_length, 2)
-    mean_user_rating_dict[user]  = str(mean_user_rating)
+    if temp_length > 0:
+        mean_user_rating = round(total_user_rating / temp_length, 2)
+        mean_user_rating_dict[user]  = str(mean_user_rating)
 
 print("Calculating mean ratings of movies...")
 mean_movie_rating_dict = {}
@@ -51,8 +53,11 @@ for movie in movieIds:
         if user_rating_matrix[int(user)][int(movie)] > 0:
             movie_rating = movie_rating + user_rating_matrix[int(user)][int(movie)]
             temp_length = temp_length + 1
-            mean_movie_rating = round(movie_rating / temp_length, 2)
-    mean_movie_rating_dict[movie] = str(mean_movie_rating)
+    if temp_length > 0:
+        mean_movie_rating = round(movie_rating / temp_length, 2)
+    else:
+        mean_movie_rating = 0
+    mean_movie_rating_dict[str(movie)] = str(mean_movie_rating)
 
 total_mean_rating = round(total_rating / length, 2)
 
@@ -99,7 +104,7 @@ if method == 1:
 
     sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
 
-    top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
+    top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}   # Taking 5 nearest neighbours
 
     top_users = list(top_matches.keys())
 
@@ -115,8 +120,8 @@ if method == 1:
             temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
             temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = round(temp_numerator / temp_denominator, 2)
-    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+    pred_rating = abs(round(temp_numerator / temp_denominator, 2))
+    pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
     print("Predicted rating (baseline): " + str(pred_rating_baseline))
@@ -160,7 +165,7 @@ elif method == 2:
         if len(temp_test_rating_dict[user]) > 0:
             for rank in range(0, len(temp_test_rating_dict[user])):
                 sq_d = sq_d + (test_movies_ranks[user][rank] - user_movies_ranks[user][rank]) ** 2
-            result = 1 - ((6 * sq_d) / (len(temp_test_rating_dict[user]) * ((len(temp_test_rating_dict[user]) ** 2))))
+            result = 1 - ((6 * sq_d) / (len(temp_test_rating_dict[user]) * ((len(temp_test_rating_dict[user]) ** 2) - 1)))
             spearman_dict[user] = str(result)
 
     temp_numerator = 0
@@ -176,8 +181,8 @@ elif method == 2:
                 temp_denominator = temp_denominator + float(spearman_dict[user])
 
     print("Predicting rating...")
-    pred_rating = round((temp_numerator / temp_denominator), 2)
-    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+    pred_rating = abs(round((temp_numerator / temp_denominator), 2))
+    pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
     print("Predicted rating (baseline): " + str(pred_rating_baseline))
@@ -190,38 +195,77 @@ elif method == 2:
 
 # Root Mean Square Error
 elif method == 3:
-    train_users = list(numpy.random.randint(1, len(userIds), size=int(0.5*len(userIds))))
-    temp_userIds = list(userIds)
-    test_users = []
-    for i in range(0, len(temp_userIds)):
-        if(int(temp_userIds[i]) not in train_users):
-            test_users.append(int(temp_userIds[i]))
-    test_users = list(numpy.random.randint(1, len(test_users), size=int(0.2*len(userIds))))
+    test_users = list(numpy.random.randint(1, len(userIds), size=int(0.2*len(userIds))))
     errors = []
-    for test_user in test_users:
-        print("*****  Test user: " + str(test_user) + "  *****")
-        similarity = []
-        sim_train_user_vector = [[]]
-        test_user_vector = user_rating_matrix[int(test_user)]
-        temp_rx_array = numpy.array(test_user_vector)
-        rx_mag = round(numpy.linalg.norm(temp_rx_array), 2)
-        for train_user in train_users:
-            print("Train user: " + str(train_user))
-            train_user_vector = user_rating_matrix[int(train_user)]
-            temp_numerator = 0
-            for i in range(0, len(train_user_vector)):
-                temp_numerator = temp_numerator + (test_user_vector[i] * train_user_vector[i])
-            temp_ry_array = numpy.array(train_user_vector)
-            ry_mag = round(numpy.linalg.norm(temp_ry_array), 2)
-            temp_sim = temp_numerator/ (rx_mag * ry_mag)
-            sim = round(temp_sim, 2)
-            similarity.append(sim)
-            sim_train_user_vector.append([round((sim * r), 2) for r in train_user_vector])
-        temp_numerator = [sum([row[i] for row in sim_train_user_vector]) for i in range(0,len(sim_train_user_vector[0]))]
-        temp_denominator = sum(similarity)
-        pred_rating = [numerator / temp_denominator for numerator in temp_numerator]
-        errors.append(round((pred_rating - test_user_vector) ** 2), 2)
-        print("\n")
+    errors_baseline = []
+    movieIds = list(movieIds)
 
-    rms_error = round((sum(errors) / len(errors)), 2)
+    for test_user in test_users:
+        test_user = int(test_user)
+        print("##### Test user: " + str(test_user))
+        test_movie = random.randint(1, len(movieIds))
+        test_movie = movieIds[test_movie]
+        test_movie = int(test_movie)
+        print("##### Test movie: " + str(test_movie))
+        last_movie = int(list(rating_dict[str(test_user)].keys())[-1]) + 1
+        test_baseline = total_mean_rating + (float(mean_user_rating_dict[str(test_user)]) - total_mean_rating) + (float(mean_movie_rating_dict[str(test_movie)]) - total_mean_rating)
+        pearson_dict = {}
+        mean_test_rating = 0
+        test_user_rating = 0
+        print("Calculating similarities...")
+        for user in userIds:
+            user = int(user)
+            user_rating = 0
+            temp_numerator = 0
+            temp_denominator_x = 0
+            temp_denominator_y = 0
+            length = 0
+            for movie in range(0, last_movie):
+                if (user_rating_matrix[test_user][movie] > 0) and (user_rating_matrix[user][movie] > 0):
+                    test_user_rating = test_user_rating + user_rating_matrix[test_user][movie]
+                    user_rating = user_rating = user_rating + user_rating_matrix[user][movie]
+                    length = length + 1
+            if length > 0:
+                mean_test_user_rating = test_user_rating / length
+                mean_user_rating = user_rating / length
+                for movie in range(1, last_movie):
+                    if (user_rating_matrix[test_user][movie] > 0) and (user_rating_matrix[user][movie] > 0):
+                        temp_numerator = temp_numerator + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) * (user_rating_matrix[user][movie] - mean_user_rating))
+                        temp_denominator_x = temp_denominator_x + ((user_rating_matrix[test_user][movie] - mean_test_user_rating) ** 2)
+                        temp_denominator_y = temp_denominator_y + ((user_rating_matrix[user][movie] - mean_user_rating) ** 2)
+                temp_denominator = math.sqrt(temp_denominator_x) * math.sqrt(temp_denominator_y)
+                if temp_denominator > 0:
+                    coeff = temp_numerator / temp_denominator
+                    pearson_dict[user] = coeff
+
+        sorted_pearson_dict = {t: pearson_dict[t] for t in sorted(pearson_dict, key=pearson_dict.get, reverse=True)}
+
+        top_matches = {k:sorted_pearson_dict[k] for k in list(sorted_pearson_dict)[:5]}
+
+        top_users = list(top_matches.keys())
+
+        temp_numerator = 0
+        temp_denominator = 0
+        temp_numerator_baseline = 0
+
+        print("Predicting rating...")
+        for user in top_users:
+            if top_matches[user] != 1:
+                user_baseline = float(mean_user_rating_dict[str(user)]) - user_rating_matrix[user][test_movie]
+                temp_numerator_baseline = temp_numerator_baseline + (float(top_matches[user]) * (user_rating_matrix[user][test_movie] - user_baseline))
+                temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
+                temp_denominator = temp_denominator + float(top_matches[user])
+
+        if temp_denominator > 0:
+            pred_rating = abs(round(temp_numerator / temp_denominator, 2))
+            pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
+            test_rating = user_rating_matrix[test_user][test_movie]
+            error = (pred_rating - test_rating) ** 2
+            error_baseline = (pred_rating_baseline - test_rating) ** 2
+            errors.append(round(error, 2))
+            errors_baseline.append(round(error_baseline, 2))
+
+    rms_error = round(math.sqrt((round((sum(errors) / len(errors)), 2))), 2)
+    rms_error_baseline = round(math.sqrt(round((sum(errors_baseline) / len(errors_baseline)), 2)), 2)
     print("RMSE of recommender system: " + str(rms_error))
+    print("RMSE of recommender system (baseline): " + str(rms_error_baseline))
