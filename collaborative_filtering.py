@@ -120,8 +120,8 @@ if method == 1:
             temp_numerator = temp_numerator + (float(top_matches[user]) * user_rating_matrix[user][test_movie])
             temp_denominator = temp_denominator + float(top_matches[user])
 
-    pred_rating = round(temp_numerator / temp_denominator, 2)
-    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+    pred_rating = abs(round(temp_numerator / temp_denominator, 2))
+    pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
     print("Predicted rating (baseline): " + str(pred_rating_baseline))
@@ -165,7 +165,7 @@ elif method == 2:
         if len(temp_test_rating_dict[user]) > 0:
             for rank in range(0, len(temp_test_rating_dict[user])):
                 sq_d = sq_d + (test_movies_ranks[user][rank] - user_movies_ranks[user][rank]) ** 2
-            result = 1 - ((6 * sq_d) / (len(temp_test_rating_dict[user]) * ((len(temp_test_rating_dict[user]) ** 2))))
+            result = 1 - ((6 * sq_d) / (len(temp_test_rating_dict[user]) * ((len(temp_test_rating_dict[user]) ** 2) - 1)))
             spearman_dict[user] = str(result)
 
     temp_numerator = 0
@@ -181,8 +181,8 @@ elif method == 2:
                 temp_denominator = temp_denominator + float(spearman_dict[user])
 
     print("Predicting rating...")
-    pred_rating = round((temp_numerator / temp_denominator), 2)
-    pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+    pred_rating = abs(round((temp_numerator / temp_denominator), 2))
+    pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
     test_rating = user_rating_matrix[test_user][test_movie]
     print("Predicted rating: " + str(pred_rating))
     print("Predicted rating (baseline): " + str(pred_rating_baseline))
@@ -257,8 +257,8 @@ elif method == 3:
                 temp_denominator = temp_denominator + float(top_matches[user])
 
         if temp_denominator > 0:
-            pred_rating = round(temp_numerator / temp_denominator, 2)
-            pred_rating_baseline = round(temp_numerator_baseline / temp_denominator, 2)
+            pred_rating = abs(round(temp_numerator / temp_denominator, 2))
+            pred_rating_baseline = abs(round(temp_numerator_baseline / temp_denominator, 2))
             test_rating = user_rating_matrix[test_user][test_movie]
             error = (pred_rating - test_rating) ** 2
             error_baseline = (pred_rating_baseline - test_rating) ** 2
