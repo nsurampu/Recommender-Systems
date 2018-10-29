@@ -3,6 +3,7 @@ import math
 import numpy as np
 import os
 import time
+import cur
 np.set_printoptions(threshold=np.inf)
 np.random.seed(30)
 
@@ -25,7 +26,7 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
         @return (C,U,R): tuple of decomposed matrices
 
     '''
-    if energy_needed > 1:
+    if energy_needed > 1 or energy_needed < 0:
         raise Exception('energy_needed should not exceed 1. The value of energy_needed was: {}'.format(energy_needed))
 
     file = 'CUR_Matrices.txt'
@@ -124,9 +125,6 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
 
     return C,U,R,eigenvalues_WT_W
 
-
-
-
 def rmse(originalMatrix,C,U,R):
 
     '''
@@ -147,7 +145,6 @@ def rmse(originalMatrix,C,U,R):
     error = np.power(error,0.5)
     return error
 
-
 def query(q,R):
     '''
         This function queries the CUR matrix given a query vector
@@ -166,9 +163,6 @@ def query(q,R):
     # print(final)
     duration = time.clock() - start_time
     return final,duration
-
-
-
 
 def precisionTopK(k,q,R):
     '''
@@ -198,7 +192,6 @@ def precisionTopK(k,q,R):
             prec_val +=1
     prec_val = prec_val / k
     return prec_val
-
     
 def spearmanCoefficient(predicted_rating,test_rating):
     '''
@@ -218,9 +211,6 @@ def spearmanCoefficient(predicted_rating,test_rating):
     n = d.shape[0]
     rho = 1 - (6*sum_d_squared)/(n*(n**2 - 1))
     return rho
-
-
-
 
 def Energy(A):
     A = A*A

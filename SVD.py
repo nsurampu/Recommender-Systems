@@ -152,112 +152,112 @@ def spearmanCoefficient(predicted_rating,test_rating):
     return rho
 
 
+if __name__ == "__main__":
+    movie_size = 2000  # INCLUSIVE OF 2000th movie
+    user_size = 610  # INCLUSIVE OF 1500th movie
+    test_shift = 10
 
-movie_size = 2000  # INCLUSIVE OF 2000th movie
-user_size = 610  # INCLUSIVE OF 1500th movie
-test_shift = 10
+    movie_pickle = open("movie_file.txt", 'rb')
+    rating_pickle = open("rating_file.txt", 'rb')
 
-movie_pickle = open("movie_file.txt", 'rb')
-rating_pickle = open("rating_file.txt", 'rb')
+    movie_dict = pickle.load(movie_pickle)
+    rating_dict = pickle.load(rating_pickle)
 
-movie_dict = pickle.load(movie_pickle)
-rating_dict = pickle.load(rating_pickle)
+    movieIds = movie_dict.keys()
+    userIds = rating_dict.keys()
 
-movieIds = movie_dict.keys()
-userIds = rating_dict.keys()
+    user_rating_matrix = [0] * (len(userIds) + 1)
 
-user_rating_matrix = [0] * (len(userIds) + 1)
+    for i in range(0, len(user_rating_matrix)):
+        user_rating_matrix[i] = [0] * (movie_size + 1)  # Possible Change
 
-for i in range(0, len(user_rating_matrix)):
-    user_rating_matrix[i] = [0] * (movie_size + 1)  # Possible Change
+    for user in userIds:
+        user_movies = rating_dict[user].keys()
+        for movie in user_movies:
+            user_rating_matrix[int(user)][int(movie)] = float(
+                rating_dict[user][movie])
 
-for user in userIds:
-    user_movies = rating_dict[user].keys()
-    for movie in user_movies:
-        user_rating_matrix[int(user)][int(movie)] = float(
-            rating_dict[user][movie])
+    user_array_store = np.array(user_rating_matrix)
+    test_array = user_array_store[user_size-test_shift:,:]
+    user_array = user_array_store[1:(user_size-test_shift),:]
 
-user_array_store = np.array(user_rating_matrix)
-test_array = user_array_store[user_size-test_shift:,:]
-user_array = user_array_store[1:(user_size-test_shift),:]
+    U,sigma,V,eigenvalues = SVD(user_array)
 
-U,sigma,V,eigenvalues = SVD(user_array)
+    VT = V.T
+    # U = U.real
+    # V = V.real
+    new_A = np.dot(U,sigma)
+    FinalA = np.dot(new_A,VT)
 
-VT = V.T
-# U = U.real
-# V = V.real
-new_A = np.dot(U,sigma)
-FinalA = np.dot(new_A,VT)
+    print(FinalA.shape)
 
-print(FinalA.shape)
+    energy = Energy(eigenvalues)
+    # Reverse the eigenvalue np array
+    Reduction_array = np.empty([1])
+    for i in range(eigenvalues.size,0,-1):
+        temp = eigenvalues[0:i]
+        temp_Energy = Energy(temp)
+        if(temp_Energy >= 0.9 * energy):
+            Reduction_array = temp
+        else:
+            break
 
-energy = Energy(eigenvalues)
-# Reverse the eigenvalue np array
-Reduction_array = np.empty([1])
-for i in range(eigenvalues.size,0,-1):
-    temp = eigenvalues[0:i]
-    temp_Energy = Energy(temp)
-    if(temp_Energy >= 0.9 * energy):
-        Reduction_array = temp
-    else:
-        break
-
-#90% Reduced Matrix size
-size = Reduction_array.size
-print(size)
-Reduction_array = Reduction_array[0:(size-1)]
-Reduction_array = Reduction_array.real
-#Remake the sigma
-sigma_reduced = np.diag(Reduction_array)
-U_reduced = U[:,0:(size-1)]
-V_reduced = V[:,0:(size-1)]
-VT_reduced = V_reduced.T
-new_A_reduced = np.dot(U_reduced,sigma_reduced)
-ReducedA = np.dot(new_A_reduced,VT_reduced)
-
-
-print("Non reduced",RMSE(user_array,FinalA))
-print("90% reduced",RMSE(user_array,ReducedA))
-
-# randvar =random.randint(0,1000)
-# q = user_array[randvar,:]
-q = test_array[1,:]
-print(q)
-print("Precision_top_10: ",Precision_top_k(10,q,V))
-print("Precision_top_10 (90% reduced): ",Precision_top_k(10,q,V_reduced))
-predicted_rating = Query(q,V)
-predicted_rating_reduced = Query(q,V_reduced)
-print("Spearman Coeff:",spearmanCoefficient(predicted_rating,q))
-print("Spearman Coeff (90% reduced):",spearmanCoefficient(predicted_rating_reduced,q))
+    #90% Reduced Matrix size
+    size = Reduction_array.size
+    print(size)
+    Reduction_array = Reduction_array[0:(size-1)]
+    Reduction_array = Reduction_array.real
+    #Remake the sigma
+    sigma_reduced = np.diag(Reduction_array)
+    U_reduced = U[:,0:(size-1)]
+    V_reduced = V[:,0:(size-1)]
+    VT_reduced = V_reduced.T
+    new_A_reduced = np.dot(U_reduced,sigma_reduced)
+    ReducedA = np.dot(new_A_reduced,VT_reduced)
 
 
-U_file = open("U_file.txt", 'wb')
-V_file = open("V_file.txt", 'wb')
-sigma_file = open("sigma_file.txt", 'wb')
-U_reduced_file = open("U_reduced_file.txt", 'wb')
-V_reduced_file = open("V_reduced_file.txt", 'wb')
-sigma_reduced_file = open("sigma_reduced_file.txt", 'wb')
+    print("Non reduced",RMSE(user_array,FinalA))
+    print("90% reduced",RMSE(user_array,ReducedA))
 
-user_map = np.dot(U,sigma)
-sigma_map = np.dot(sigma,V.T)
+    # randvar =random.randint(0,1000)
+    # q = user_array[randvar,:]
+    q = test_array[1,:]
+    # print(q)
+    print("Precision_top_10: ",Precision_top_k(10,q,V))
+    print("Precision_top_10 (90% reduced): ",Precision_top_k(10,q,V_reduced))
+    predicted_rating = Query(q,V)
+    predicted_rating_reduced = Query(q,V_reduced)
+    print("Spearman Coeff:",spearmanCoefficient(predicted_rating,q))
+    print("Spearman Coeff (90% reduced):",spearmanCoefficient(predicted_rating_reduced,q))
+
+
+    U_file = open("U_file.txt", 'wb')
+    V_file = open("V_file.txt", 'wb')
+    sigma_file = open("sigma_file.txt", 'wb')
+    U_reduced_file = open("U_reduced_file.txt", 'wb')
+    V_reduced_file = open("V_reduced_file.txt", 'wb')
+    sigma_reduced_file = open("sigma_reduced_file.txt", 'wb')
+
+    user_map = np.dot(U,sigma)
+    sigma_map = np.dot(sigma,V.T)
 
 
 
-pickle.dump(U, U_file)
-pickle.dump(V, V_file)
-pickle.dump(sigma ,sigma_file)
+    pickle.dump(U, U_file)
+    pickle.dump(V, V_file)
+    pickle.dump(sigma ,sigma_file)
 
-U_file.close()
-V_file.close()
-sigma_file.close()
+    U_file.close()
+    V_file.close()
+    sigma_file.close()
 
-movie_pickle.close()
-rating_pickle.close()
+    movie_pickle.close()
+    rating_pickle.close()
 
-pickle.dump(U_reduced, U_reduced_file)
-pickle.dump(V_reduced, V_reduced_file)
-pickle.dump(sigma_reduced ,sigma_reduced_file)
+    pickle.dump(U_reduced, U_reduced_file)
+    pickle.dump(V_reduced, V_reduced_file)
+    pickle.dump(sigma_reduced ,sigma_reduced_file)
 
-U_reduced_file.close()
-V_reduced_file.close()
-sigma_reduced_file.close()
+    U_reduced_file.close()
+    V_reduced_file.close()
+    sigma_reduced_file.close()
