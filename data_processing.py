@@ -1,3 +1,5 @@
+'''This program processes the csv files for the recommender systems'''
+
 import csv
 import pickle
 from collections import defaultdict

@@ -1,3 +1,6 @@
+'''This programn builds 3 recommender systems:
+precision on top K, Spearman ranking and RMSE'''
+
 import pickle
 import math
 import scipy.stats as ss

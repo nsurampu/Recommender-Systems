@@ -32,8 +32,8 @@ CUR.py : Recommends users to movies using CUR decomposition, it has the followin
 ### Run this in your project folder:
 
 $ python data_processing.py </br>
-$ python collaborative_filtering.py
-$ python SVD.py
+$ python collaborative_filtering.py </br>
+$ python SVD.py </br>
 $ python CUR.py
 
 ### Results during runs
@@ -44,8 +44,8 @@ Collaborative filtering | 0.9 | 72% | 40% | 1.823s
 Collaborative filtering (baseline) | 3.6 | 65% | 26% | 1.823s
 SVD | 0.18 | 70% | 86% | 2.384s
 SVD (90% Energy) | 4.00 | 90% | 94% | 2.384s
-CUR | 0.112925 | 0.899 | 1.0 | 58.926 ms  
-CUR (90% Energy) | 0.11166 | 0.899 | 1.0 | 51.930 ms 
+CUR | 0.112925 | 89.9% | 100% | 58.926 ms  
+CUR (90% Energy) | 0.11166 | 89.9% | 100% | 51.930 ms
 
 ### Built With
 
