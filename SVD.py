@@ -222,7 +222,7 @@ print("90% reduced",RMSE(user_array,ReducedA))
 # randvar =random.randint(0,1000)
 # q = user_array[randvar,:]
 q = test_array[1,:]
-# print(q)
+print(q)
 print("Precision_top_10: ",Precision_top_k(10,q,V))
 print("Precision_top_10 (90% reduced): ",Precision_top_k(10,q,V_reduced))
 predicted_rating = Query(q,V)

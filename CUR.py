@@ -6,25 +6,25 @@ import time
 np.set_printoptions(threshold=np.inf)
 np.random.seed(30)
 
-'''
-Takes the user rating matrix and returns the computed C, U and R matrices.
-If it finds that the file CUR_Matrices.txt already exists, it unpickles it and returns them,
-else it computes them, pickles them and then returns them, You can recompute these matrices
-using the boolean flag recomputeMatrix .
 
-Parameters:
------------
-A : matrix that has to be decomposed
-recomputeMatrix : as name suggests, recompute the decomposition matrices, pickle them and return the matrices
-
-returns:
---------
-matrices C,U,R
-
-'''
 
 def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
+    '''
+    Takes the user rating matrix and returns the computed C, U and R matrices.
+    If it finds that the file CUR_Matrices.txt already exists, it unpickles it and returns them,
+    else it computes them, pickles them and then returns them, You can recompute these matrices
+    using the boolean flag recomputeMatrix .
 
+        @type A: Numpy array
+        @param A : matrix that has to be decomposed
+        @type recomputeMatrix: boolean
+        @param recomputeMatrix : as name suggests, recompute the decomposition matrices, pickle them and return the matrices
+        @type: energy_needed: float in range [0,1]
+        @param energy_needed: float, the energy that has to be retained during the decomposition
+        @rtype (C,U,R) tuple of Numpy arrays 
+        @return (C,U,R): tuple of decomposed matrices
+
+    '''
     if energy_needed > 1:
         raise Exception('energy_needed should not exceed 1. The value of energy_needed was: {}'.format(energy_needed))
 
@@ -61,7 +61,6 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
         # SVD for W
         W_WT = np.dot(W,W.T)
         WT_W = np.dot(W.T,W)
-        print('shapes',W_WT.shape,WT_W.shape)
         # eigenvalue decomposition of W WT
         eigenvalues_W_WT, X = np.linalg.eig(W_WT)
         idx = np.argsort(eigenvalues_W_WT)
@@ -85,8 +84,6 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
             variances = variances.real
             total_energy = np.sum(variances)
             total_energy = total_energy.real
-            # print('total energy ',total_energy)
-            # print(variances[:10])
 
             index_to_slice = 0
 
@@ -124,57 +121,25 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
             R = data['R']
             U = data['U']
             eigenvalues_WT_W = data['eigenvalues']
-            # print(C.shape,R.shape,U.shape)
-
-        '''...check this...'''
-    # if energy_needed != 1:
-    #     energy = Energy(eigenvalues_WT_W)
-    #     print('energy ',energy)
-    #     # Reverse the eigenvalue np array
-    #     Reduction_array = np.empty([1])
-    #     for i in range(eigenvalues_WT_W.size,0,-1):
-    #         temp = eigenvalues_WT_W[0:i]
-    #         temp_Energy = Energy(temp)
-    #         if(temp_Energy >= energy_needed * energy):
-    #             Reduction_array = temp
-    #             print(i)
-    #         else:
-    #             break
-    #     size = Reduction_array.size
-    #     print('lite ',size)
-    #     print('zeros at',np.where(eigenvalues_WT_W == 0)[0])
-    #     print(C.shape,U.shape,R.shape)
-    #     Reduction_array = Reduction_array[0:(size-1)]
-    #     Reduction_array = Reduction_array.real
-    #     sigma_reduced = np.diag(Reduction_array)
-    #     C_reduced = C[:,0:(size-1)]
-    #     R_reduced = R[:,0:(size-1)]
-    #     RT_reduced = R_reduced.T
-    #     print('hehe ' ,C_reduced.shape,R_reduced.shape,sigma_reduced.shape)
-    #     new_A_reduced = np.dot(C_reduced,sigma_reduced)
-    #     ReducedA = np.dot(new_A_reduced,RT_reduced)
-    #     print(ReducedA.shape)
-    #     print(user_rating_matrix.shape)
 
     return C,U,R,eigenvalues_WT_W
 
 
-'''
-Calculates the Root mean Squared Error(RMSE) incurred after CUR decomposition
-
-Parameters:
------------
-A: original matrix
-C,U,R: matrices obtained after decomposition
-
-returns:
---------
-error: reconstruction error incurred while decomposing
-
-'''
 
 
 def rmse(originalMatrix,C,U,R):
+
+    '''
+        Calculates the Root mean Squared Error(RMSE) incurred after CUR decomposition
+
+        @param A: original matrix
+        @param C: Vector numpy
+        @param U: Vector numpy
+        @param R:Vector numpy
+
+        @return error: reconstruction error incurred while decomposing
+
+    '''
     reconstructedMatrix = np.dot(C,U)
     reconstructedMatrix = np.dot(reconstructedMatrix,R)
 
@@ -182,34 +147,69 @@ def rmse(originalMatrix,C,U,R):
     error = np.power(error,0.5)
     return error
 
-def query(R,q):
+
+def query(q,R):
+    '''
+        This function queries the CUR matrix given a query vector
+
+        @type  q: Square matrix (1D) (numpy Array)
+        @param q: Query vector
+        @type  R: Square matrix (numpy Array)
+        @param R: The V obtained from the SVD
+        @rtype: Square matrix (1D) (numpy Array)
+        @return: The result vector obtained
+    '''
     start_time = time.clock()
-    temp = np.dot(q,R)
-    final = np.dot(temp,R.T)
+    # print('query R',R.shape)
+    temp = np.dot(R.T,R)
+    final = np.dot(temp,q)
+    # print(final)
     duration = time.clock() - start_time
     return final,duration
 
+
+
+
 def precisionTopK(k,q,R):
-    final = query(q,R)
-    print(final.shape)
-    final[final < 3.5] = 0
-    final[final > 3.5] = 1
+    '''
+        This function calculates the Precision Top K
+
+        @type  k : number
+        @param k : The k in Precision Top k
+        @type q: Square matrix (1D) (numpy Array)
+        @parma q: Query Vector
+        @type  R: Square matrix (numpy Array)
+        @param R: The V obtained from the SVD
+        @rtype:  number
+        @return: Precision Top K value obtained
+    '''
+    query_result,duration = query(q,R)
+    # print(query_result)
+    query_result[query_result < 3.5] = 0
+    query_result[query_result > 3.5] = 1
     q[q < 3.5] = 0
     q[q > 3.5] = 1
-    idx = final.argsort()[::-1]
-    final = final[idx]
+    idx = query_result.argsort()[::-1]
+    query_result = query_result[idx]
     q = q[:,idx]
     prec_val = 0
     for i in range(0,k-1):
-        if(final[i,0] == 1 and q[i,0] == 1):
+        if(query_result[i,0] == 1 and q[i,0] == 1) or (query_result[i,0] == 0 and q[i,0] == 0):
             prec_val +=1
     prec_val = prec_val / k
     return prec_val
 
-'''
-
-'''
+    
 def spearmanCoefficient(predicted_rating,test_rating):
+    '''
+    This function calculates the spearman coefficient of two vectors
+    @type predicted_rank: Numpy array
+    @param: predicted_rating: predicted rating by the decomposition
+    @type test_rating: Numpy array
+    @param: test_rating: actual rating
+    @rtype: float
+    @return rho: the spearman coefficient
+    '''
     predicted_rank = np.argsort(predicted_rating)
     test_rank = np.argsort(test_rating)
     d = test_rank - predicted_rank
@@ -228,7 +228,8 @@ def Energy(A):
 
 if __name__=='__main__':
     movie_size = 2000           #INCLUSIVE OF 2000th movie
-    user_size = 1500            #INCLUSIVE OF 1500th movie
+    user_size = 610            #INCLUSIVE OF 1500th movie
+    test_shift = 10
 
     movie_pickle = open("movie_file.txt", 'rb')
     rating_pickle = open("rating_file.txt", 'rb')
@@ -264,15 +265,28 @@ if __name__=='__main__':
     #     print(min_error,i)
     # print('min error at ',min_error,min_error_index)
 
-    C,U,R,eigenvalues = CUR(user_rating_matrix,605,recomputeMatrix=True,energy_needed=.9)
+    C,U,R,eigenvalues = CUR(user_rating_matrix,605,recomputeMatrix=True)
     error = rmse(user_rating_matrix,C,U,R)
-    new_A = np.dot(np.dot(C,U),R)
-    print('error my implementation ',error)
-
-    # size_of_U = 370   # found experimentally
-    # C,U,R = cur_decomposition(user_rating_matrix,size_of_U)
-    # error = rmse(user_rating_matrix,C,U,R)
-    # print('error library ',error)
-    # new_A = np.dot(np.dot(C,U),R)
-    # print(user_rating_matrix[:10,:10])
-    # print(new_A[:10,:10])
+    print('rmse: ',error) 
+    
+    C_reduced,U_reduced,R_reduced,eigenvalues_reduced = CUR(user_rating_matrix,605,recomputeMatrix=True,energy_needed=.9)
+    error = rmse(user_rating_matrix,C_reduced,U_reduced,R_reduced)
+    print('rmse 90% energy: ',error)
+    test_array = user_rating_matrix[user_size-test_shift:,:]
+    user_array = user_rating_matrix[1:(user_size-test_shift),:]
+    precision = 0
+    precision_reduced = 0
+    print('computing average precision')
+    for i in range(test_array.shape[0]):
+        q = test_array[1,:]
+        q = np.reshape(q,(q.shape[0],1))
+        precision += precisionTopK(10,q,R)
+        precision_reduced += precisionTopK(10,q,R_reduced)
+    print('CUR: ',precision/test_array.shape[0])
+    print('CUR: 90% energy: ',precision_reduced/test_array.shape[0])
+    predicted_rating,duration_query = query(q,R)
+    predicted_rating_reduced,duration_query_reduced = query(q,R_reduced)
+    print("Spearman Coeff:",spearmanCoefficient(predicted_rating,q))
+    print("Spearman Coeff (90% reduced):",spearmanCoefficient(predicted_rating_reduced,q))
+    print('duration ',duration_query*1000,' milli-seconds')
+    print('duration reduced query',duration_query_reduced*1000,' milli-seconds')
