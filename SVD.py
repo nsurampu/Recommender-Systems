@@ -2,6 +2,7 @@ import pickle
 import math
 import numpy as np
 import random
+import time
 np.set_printoptions(threshold=np.inf)
 
 
@@ -93,14 +94,17 @@ def Query(q,V):
     @param q: Query vector
     @type  V: Square matrix (numpy Array)
     @param V: The V obtained from the SVD
-    @rtype: Square matrix (1D) (numpy Array)
-    @return: The result vector obtained
+    @rtype: Tuple (Square matrix (1D) (numpy Array),number)
+    @return: Tuple (The result vector obtained,time taken)
     """
+    start_time = time.clock()
     temp = np.dot(q,V)
     final = np.dot(temp,V.T)
-    return final
+    duration = time.clock() - start_time
+    # print(duration)
+    return final,duration
 
-def Precision_top_k(k,q,V):
+def Precision_top_k(k,q,final):
     """
     This function calculates the Precision Top K
 
@@ -108,12 +112,12 @@ def Precision_top_k(k,q,V):
     @param k : The k in Precision Top k
     @type q: Square matrix (1D) (numpy Array)
     @para q: Query Vector
-    @type  V: Square matrix (numpy Array)
-    @param V: The V obtained from the SVD
+    @type  final: Square matrix (1D) (numpy Array)
+    @param final: Final matrix obtained from Query
     @rtype:  number
     @return: Precision Top K value obtained
     """
-    final = Query(q,V)
+
     # print("F,q Shape",final.shape,q.shape)
     final[final < 3.5] = 0
     final[final > 3.5] = 1
@@ -178,7 +182,7 @@ if __name__ == "__main__":
                 rating_dict[user][movie])
 
     user_array_store = np.array(user_rating_matrix)
-    test_array = user_array_store[user_size-test_shift:,:]
+    test_array = user_array_store[user_size-test_shift:(user_size),:]
     user_array = user_array_store[1:(user_size-test_shift),:]
 
     U,sigma,V,eigenvalues = SVD(user_array)
@@ -221,15 +225,31 @@ if __name__ == "__main__":
 
     # randvar =random.randint(0,1000)
     # q = user_array[randvar,:]
-    q = test_array[1,:]
-    # print(q)
-    print("Precision_top_10: ",Precision_top_k(10,q,V))
-    print("Precision_top_10 (90% reduced): ",Precision_top_k(10,q,V_reduced))
-    predicted_rating = Query(q,V)
-    predicted_rating_reduced = Query(q,V_reduced)
-    print("Spearman Coeff:",spearmanCoefficient(predicted_rating,q))
-    print("Spearman Coeff (90% reduced):",spearmanCoefficient(predicted_rating_reduced,q))
+    # print(test_array.shape[0])
+    psum = 0
+    psum_red = 0
+    scsum = 0
+    scsum_red = 0
+    dur_sum =0
+    dur_red_sum =0
+    for i in range(1,test_array.shape[0]):
+        q = test_array[i,:]
+        # print(q)
+        predicted_rating,dur = Query(q,V)
+        predicted_rating_reduced,dur_red = Query(q,V_reduced)
+        dur_sum += dur
+        dur_red_sum += dur_red
+        psum += Precision_top_k(10,q,predicted_rating)
+        psum_red += Precision_top_k(10,q,predicted_rating_reduced)
+        scsum += spearmanCoefficient(predicted_rating,q)
+        scsum_red += spearmanCoefficient(predicted_rating_reduced,q)
 
+    print("Precision_top_10: ",psum/test_array.shape[0])
+    print("Precision_top_10 (90% reduced): ",psum_red/test_array.shape[0])
+    print("Spearman Coeff:",scsum/test_array.shape[0])
+    print("Spearman Coeff (90% reduced):",scsum_red/test_array.shape[0])
+    print("Duration:",dur_sum/test_array.shape[0])
+    print("Duration (90% reduced):",dur_red_sum/test_array.shape[0])
 
     U_file = open("U_file.txt", 'wb')
     V_file = open("V_file.txt", 'wb')
