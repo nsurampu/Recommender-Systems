@@ -90,7 +90,7 @@ def CUR(A,num_dimensions,recomputeMatrix=False,energy_needed=1.0):
 
             index_to_slice = 0
 
-            for i in range(variances.shape[0]):
+            for i in range(0,variances.shape[0],-1):
                 current_energy = np.sum(variances[:i])
                 if current_energy >= energy_needed*total_energy:
                     index_to_slice = i
@@ -264,7 +264,7 @@ if __name__=='__main__':
     #     print(min_error,i)
     # print('min error at ',min_error,min_error_index)
 
-    C,U,R,eigenvalues = CUR(user_rating_matrix,605,recomputeMatrix=True,energy_needed=1)
+    C,U,R,eigenvalues = CUR(user_rating_matrix,605,recomputeMatrix=True,energy_needed=.9)
     error = rmse(user_rating_matrix,C,U,R)
     new_A = np.dot(np.dot(C,U),R)
     print('error my implementation ',error)
