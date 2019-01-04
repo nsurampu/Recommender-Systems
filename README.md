@@ -39,10 +39,10 @@ CUR.py : Recommends users to movies using CUR decomposition, it has the followin
 
 ### Run this in your project folder:
 
-$ python data_processing.py </br>
-$ python collaborative_filtering.py </br>
-$ python SVD.py </br>
-$ python CUR.py
+    $ python data_processing.py </br>
+    $ python collaborative_filtering.py </br>
+    $ python SVD.py </br>
+    $ python CUR.py
 
 ### Results during runs
 
@@ -59,12 +59,12 @@ CUR (90% Energy) | 0.11166 | 89.9% | 100% | 51.930 ms
 
 The project uses
 
-    Python3
-    Numpy
-    Scipy
-    OS
-    Pickle
-    Math
+- Python3
+- Numpy
+- Scipy
+- OS
+- Pickle
+- Math
 
 ### Authors
 
